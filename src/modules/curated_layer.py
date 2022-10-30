@@ -13,13 +13,13 @@ def create_curated_layer():
 	"""# #Log_Details(raw_layer)"""
 
 	# Read CSV File and Write to Table
-	# df = spark.read.option("delimiter"," ").csv("C:\\Users\\kaverip\\Downloads\\299999.text")
-	df = spark.read.option("delimiter"," ").csv("s3://managed-kafka-kaveri-new/kafka_log_files/file-topic/0/299999.text")
+	 
+	df = spark.read.option("delimiter"," ").csv("s3://managed-kafka-ramasiva/kafka_log_files/file-topic/0/299999.text")
 	df.show(truncate = False)
 
 	# Giving col names to each columns
 
-	
+	import pyspark.sql.functions as F
 	df_col = (df.select(
 	    F.monotonically_increasing_id().alias('row_id'),
 	    F.col("_c0").alias("client_ip"),
@@ -36,24 +36,17 @@ def create_curated_layer():
 
 	df_col.show(truncate = False)
 
-	"""## ##Log_details(Cleansed_layer)"""
 
-	# Removing the [] in datetime column by using regex replace func
+
+	
 	df_clean = df_col.withColumn('datetime', regexp_replace('datetime', '\[|\]|', ''))
 	df_clean.show()
 
-	df_date = df_clean.withColumn("datetime",to_timestamp("datetime","dd/MMM/yyyy:HH:mm:ss"))
+	df_date = df_clean.withColumn("datetime",to_timestamp("datetime","dd/MMM/yyyy:HH:mm:ss")).withColumn('datetime', date_format(col("datetime"),"MM/dd/yyyy HH:mm:ss"))
 	df_date.show()
 	df_date.printSchema()
 
 	# df_date1 = df_date.select(col("*"),date_format(col("datetime"), "MM-dd-yyyy:HH:mm:ss").alias("datetime_format"))
-	df_dateformat = df_date.withColumn("datetime", date_format(col("datetime"), "MM-dd-yyyy:HH:mm:ss"))
-	df_dateformat.show()
-
-	df_dateformat_con = df_dateformat.withColumn("datetime",to_timestamp("datetime","MM-dd-yyyy:HH:mm:ss"))
-	df_dateformat_con.show()
-
-	df_dateformat_con.printSchema()
 
 	# Applying the condition to the above df
 
@@ -88,7 +81,7 @@ def create_curated_layer():
 	"""## #Replace part of get with put in request column"""
 
 	#Replace part of get with put in request column
-	
+	from pyspark.sql.functions import regexp_replace
 
 	final_cleansed = cleansed_data1.withColumn('method', regexp_replace('method', 'GET', 'PUT'))
 	final_cleansed.show(truncate=False)
@@ -104,54 +97,40 @@ def create_curated_layer():
 	df_grp_get = final_cleansed.groupBy("method").agg(count("method").alias("method_count"))
 	df_grp_get.show()
 
-	df_days = final_cleansed.filter(col("client_ip")!="").withColumn("day_hour",hour(col("datetime")))
-	df_days.show()
+	def split_date(val):
+	  return val.split(":")[0]
 
-	df_rows = cleansed_data.groupBy("client_ip").agg(count("row_id").alias("row_id"))
-	df_rows.show(truncate = False)
+	split_date_udf = udf(lambda x: split_date(x), StringType())
 
-	log_agg_per_device = final_cleansed.filter(col("client_ip")!="").withColumn("day_hour", hour(col("datetime"))) \
-	         .groupBy("client_ip") \
-	         .agg(count(col('row_id')).alias("row_id"), \
-	         first("day_hour").alias("day_hour"), \
-	         )
 
-	log_agg_per_device.show(truncate=False)
-
-	df_apply = lambda x: sum(when(x,1).otherwise(0))
-
-	log_agg_per_device = final_cleansed.filter(col("client_ip")!="").withColumn("day_hour", hour(col("datetime"))) \
-	         .groupBy("client_ip") \
-	         .agg(count(col('row_id')).alias("row_id"), \
-	         first("day_hour").alias("day_hour"), \
-	         df_apply(col('method') == "PUT").alias("no_put"), \
-	         df_apply(col('method') == "POST").alias("no_post"), \
-	         df_apply(col('method') == "HEAD").alias("no_head"), \
-	        )
-
+	cnt_cond = lambda cond: sum(when(cond, 1).otherwise(0))
+	log_agg_per_device = final_cleansed.withColumn("day_hour", split_date_udf(col("datetime"))).groupBy("day_hour", "client_ip") \
+												    .agg(cnt_cond(col('method') == "PUT").alias("no_put"), \
+												         cnt_cond(col('method') == "POST").alias("no_post"), \
+												         cnt_cond(col('method') == "HEAD").alias("no_head"), \
+												        ).orderBy(asc("day_hour")).withColumn("row_id", monotonically_increasing_id())\
+	                              .select("row_id", "day_hour","client_ip","no_put","no_post","no_head")
 	log_agg_per_device.show()
 
 	log_agg_per_device.orderBy(col("row_id").desc()).show(truncate = False)
 
-	log_agg_per_device.write.mode("overwrite").format('csv').option("header",True).save("s3://databrickskaveri/final_layer/curated/curated_per_device_data")
+	log_agg_per_device.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasiva/final_layer/curated/curated_per_device_data")
 	log_agg_per_device.write.mode("overwrite").saveAsTable("curated_per_device_table")
 	per_device_hive = spark.sql("select * from curated_per_device_table")
 	per_device_hive.show()
 
 	"""## #log_agg_across_device"""
 
-	log_agg_across_device = final_cleansed.filter(col("client_ip")!="").withColumn("day_hour", hour(col("datetime"))) \
-	        .select((max(col('row_id'))+1).alias("row_id"), \
-	         first("day_hour").alias("day_hour"), \
-	         count(col('client_ip')).alias("no_of_client"), \
-	         df_apply(col('method') == "PUT").alias("no_put"), \
-	         df_apply(col('method') == "POST").alias("no_post"), \
-	         df_apply(col('method') == "HEAD").alias("no_head"), \
-	    )
-
+	log_agg_across_device = log_agg_per_device.groupBy("day_hour") \
+												    .agg(count(col("client_ip")).alias("no_of_clients"), \
+	                              sum(col('no_put')).alias("no_put"), \
+												         sum(col('no_post')).alias("no_post"), \
+												         sum(col('no_head')).alias("no_head"), \
+												        ).orderBy(asc("day_hour")).withColumn("row_id", monotonically_increasing_id())\
+	                              .select("row_id", "day_hour","no_of_clients","no_put","no_post","no_head")
 	log_agg_across_device.show()
 
-	log_agg_across_device.write.mode("overwrite").format('csv').option("header",True).save("s3://databrickskaveri/final_layer/curated/curated_across_device_data")
+	log_agg_across_device.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasiva/final_layer/curated/curated_across_device_data")
 	log_agg_across_device.write.mode("overwrite").saveAsTable("curated_across_device_table")
 	across_device_hive = spark.sql("select * from curated_across_device_table")
 	across_device_hive.show()
