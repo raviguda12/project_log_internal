@@ -36,7 +36,7 @@ def create_raw_layer():
 
 	df_col.show(truncate = False)
 
-	df_col.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasivai/final_layer/Raw/Raw_data.csv")
+	df_col.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasiva/final_layer/Raw/Raw_data.csv")
 	df_col.write.mode("overwrite").saveAsTable("raw_data_table")
 	# df_col.createOrReplaceTempView()
 
