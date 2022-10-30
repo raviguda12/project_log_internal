@@ -89,7 +89,7 @@ def create_cleansed_layer():
 	final_cleansed = cleansed_data1.withColumn('method', regexp_replace('method', 'GET', 'PUT'))
 	final_cleansed.show(truncate=False)
 
-	final_cleansed.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasivai/final_layer/cleansed/cleansed_data")
+	final_cleansed.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasiva/final_layer/cleansed/cleansed_data")
 	# final_cleansed.write.mode("overwrite").saveAsTable("curated_data_table")
 	# curated_hive = spark.sql("select * from curated_data_table")
 	# curated_hive.show()

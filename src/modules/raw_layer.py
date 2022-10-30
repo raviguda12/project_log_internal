@@ -13,7 +13,7 @@ def create_raw_layer():
 	"""# #Log_Details(raw_layer)"""
 
 	# Read CSV File and Write to Table
-	# df = spark.read.option("delimiter"," ").csv("C:\\Users\\ramasivap\\Downloads\\299999.text")
+	# df = spark.read.option("delimiter"," ").csv("C:\\Users\\ramasivaip\\Downloads\\299999.text")
 	df = spark.read.option("delimiter"," ").csv("s3://managed-kafka-ramasiva/kafka_log_files/file-topic/0/299999.text")
 	df.show(truncate = False)
 
@@ -36,7 +36,7 @@ def create_raw_layer():
 
 	df_col.show(truncate = False)
 
-	df_col.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasiva/final_layer/Raw/Raw_data.csv")
+	df_col.write.mode("overwrite").format('csv').option("header",True).save("s3://databricksramasivai/final_layer/Raw/Raw_data.csv")
 	df_col.write.mode("overwrite").saveAsTable("raw_data_table")
 	# df_col.createOrReplaceTempView()
 
