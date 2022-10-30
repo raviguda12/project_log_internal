@@ -19,7 +19,7 @@ def create_curated_layer():
 
 	# Giving col names to each columns
 
-	import pyspark.sql.functions as F
+	
 	df_col = (df.select(
 	    F.monotonically_increasing_id().alias('row_id'),
 	    F.col("_c0").alias("client_ip"),
@@ -81,7 +81,7 @@ def create_curated_layer():
 	"""## #Replace part of get with put in request column"""
 
 	#Replace part of get with put in request column
-	from pyspark.sql.functions import regexp_replace
+	
 
 	final_cleansed = cleansed_data1.withColumn('method', regexp_replace('method', 'GET', 'PUT'))
 	final_cleansed.show(truncate=False)

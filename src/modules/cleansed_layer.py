@@ -4,6 +4,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import pyspark.sql.functions as F
+from pyspark.sql.functions import regexp_replace
 
 def create_cleansed_layer():
 	spark = SparkSession.builder.appName("Demo-Project2").config("spark.master","local").enableHiveSupport().getOrCreate()
@@ -83,7 +84,7 @@ def create_cleansed_layer():
 	"""## #Replace part of get with put in request column"""
 
 	#Replace part of get with put in request column
-	from pyspark.sql.functions import regexp_replace
+	
 
 	final_cleansed = cleansed_data1.withColumn('method', regexp_replace('method', 'GET', 'PUT'))
 	final_cleansed.show(truncate=False)
