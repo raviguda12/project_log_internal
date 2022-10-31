@@ -105,11 +105,11 @@ def create_curated_layer():
 
 	cnt_cond = lambda cond: sum(when(cond, 1).otherwise(0))
 	log_agg_per_device = final_cleansed.withColumn("day_hour", split_date_udf(col("datetime"))).groupBy("day_hour", "client_ip") \
-												    .agg(cnt_cond(col('method') == "PUT").alias("no_put"), \
+												    .agg(cnt_cond(col('method') == "GET").alias("no_get"), \
 												         cnt_cond(col('method') == "POST").alias("no_post"), \
 												         cnt_cond(col('method') == "HEAD").alias("no_head"), \
 												        ).orderBy(asc("day_hour")).withColumn("row_id", monotonically_increasing_id())\
-	                              .select("row_id", "day_hour","client_ip","no_put","no_post","no_head")
+	                              .select("row_id", "day_hour","client_ip","no_get","no_post","no_head")
 	log_agg_per_device.show()
 
 	log_agg_per_device.orderBy(col("row_id").desc()).show(truncate = False)
@@ -123,7 +123,7 @@ def create_curated_layer():
 
 	log_agg_across_device = log_agg_per_device.groupBy("day_hour") \
 												    .agg(count(col("client_ip")).alias("no_of_clients"), \
-	                              sum(col('no_put')).alias("no_put"), \
+	                              sum(col('no_get')).alias("no_get"), \
 												         sum(col('no_post')).alias("no_post"), \
 												         sum(col('no_head')).alias("no_head"), \
 												        ).orderBy(asc("day_hour")).withColumn("row_id", monotonically_increasing_id())\
