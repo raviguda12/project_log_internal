@@ -10,7 +10,7 @@
 **Note :** Also aggregate level per device and across devices need to be stored for analytical purposes.
 # HIVE
 
-`hive_db` raw_log_details,cleansed_log_details`curated_curated_table` `log_agg_per_device_table` `log_agg_across_device_table`
+`hive_db` raw_log_details,cleansed_log_details`curated_log_details` `log_agg_per_device_table` `log_agg_across_device_table`
 
 #### SNOWFLAKE
 
