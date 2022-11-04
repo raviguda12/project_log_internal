@@ -1,8 +1,5 @@
 # project_log_internal
 
-# Log Project Internal
-
-
 ## Project Description
 
 * **Input source data :** Log from different ip machines like phone and browsers for the different requests raised
