@@ -2,7 +2,7 @@ import boto3
 import env
 
 
-class S3Session:
+class S3Helper:
     def get_boto3_session():
         """
         The get_boto3_session function creates a boto3 session object using the AWS credentials
