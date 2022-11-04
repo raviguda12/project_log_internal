@@ -14,7 +14,7 @@
 
 #### SNOWFLAKE
 
-`sfURL` `sfAccount` `sfUser` `sfPassword` `sfDatabase` `sfSchema` `sfWarehouse` `sfRole` raw_log_details,cleansed_log_details`curated_curated_table` `log_agg_per_device_table` `log_agg_across_device_table`
+`sfURL` `sfAccount` `sfUser` `sfPassword` `sfDatabase` `sfSchema` `sfWarehouse` `sfRole` raw_log_details,cleansed_log_details`curated_log_details `log_agg_per_device_table` `log_agg_across_device_table`
 
 
 ## Tech Stack
