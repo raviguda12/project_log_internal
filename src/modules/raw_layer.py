@@ -40,7 +40,7 @@ def create_raw_layer(processed_path, raw_path, hive_db, hive_table):
         "sfURL": "https://tm57257.europe-west4.gcp.snowflakecomputing.com/",
         "sfAccount": "tm57257",
         "sfUser": "TESTDATA",
-        "sfPassword": "Welcome@1",
+        "sfPassword": "",
         "sfDatabase": "LOGDEMO",
         "sfSchema": "PUBLIC",
         "sfWarehouse": "COMPUTE_WH",
