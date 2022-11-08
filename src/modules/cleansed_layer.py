@@ -35,6 +35,10 @@ def create_cleansed_layer(raw_path, cleansed_path, hive_db, hive_table):
     df = df.withColumn('request', regexp_replace('request', '%|,|-|\?=', ''))
     df.na.fill("Nan").show(truncate=False)
     df = df.withColumn("size", round(col("size") / 1024, 2))
+    def convert_to_kb(val):
+        return str(int(val) / (10 ** 3)) + " KB"
+    convert_to_kb_udf = F.udf(lambda x: convert_to_kb(x), StringType())
+    df = df.withColumn("size", convert_to_kb_udf(col("size")))
     # df = df.withColumn('method', regexp_replace('method', 'GET', 'POST'))
     df.write.mode("overwrite").format('csv').option("header", True).save(cleansed_path)
     df.write.mode("overwrite").saveAsTable("{}.{}".format(hive_db, hive_table))
