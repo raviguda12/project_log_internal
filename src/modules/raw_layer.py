@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.append(str(Path.cwd().parent))
+sys.path.append(str(Path.cwd().parent.parent))
 import os
 
 import findspark
@@ -6,6 +10,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import pyspark.sql.functions as F
+from helpers.snowflake_helper import SnowflakeHelper
 
 import env
 
@@ -33,26 +38,25 @@ def create_raw_layer(processed_path, raw_path, hive_db, hive_table):
         F.col("_c9").alias("user_agent")
     ))
     # df.show()
-    df.write.mode("overwrite").format('csv').option("header", True).save(raw_path)
+    def convert_to_na(val):
+        if val=="-":
+            return "NA"
+        else:
+            return str(val)
+    convert_to_na_udf = F.udf(lambda x: convert_to_na(x), StringType())
+    df = df.withColumn("referrer", convert_to_na_udf(col("referrer")))
+    df = df.withColumn('datetime', regexp_replace(col('datetime'), r'\[|\]|', ''))
+    df = df.withColumn('request', regexp_replace('request', '%|,|-|\?=', ''))
+    df = df.withColumn('referrer', regexp_replace('referrer', '%|,|-|\?=', ''))
+    df.coalesce(1).write.mode("overwrite").format('csv').option("header", True).save(raw_path)
     spark.sql("create database IF NOT EXISTS {}".format(hive_db))
-    df.write.mode("overwrite").saveAsTable("{}.{}".format(hive_db, hive_table))
-    sfOptions = {
-        "sfURL": "https://tm57257.europe-west4.gcp.snowflakecomputing.com/",
-        "sfAccount": "tm57257",
-        "sfUser": "TESTDATA",
-        "sfPassword": "",
-        "sfDatabase": "LOGDEMO",
-        "sfSchema": "PUBLIC",
-        "sfWarehouse": "COMPUTE_WH",
-        "sfRole": "ACCOUNTADMIN"
-    }
-
-    df.write.format("snowflake").options(**sfOptions).option("dbtable", "{}".format("raw_log_details")).mode(
-        "append").options(header=True).save()
+    df.coalesce(1).write.mode("overwrite").saveAsTable("{}.{}".format(hive_db, hive_table))
+    return df
 
 
 if __name__ == "__main__":
-    create_raw_layer(r"{}/{}".format(os.getcwd(), env.processed_input_path),
+    df = create_raw_layer(r"{}/{}".format(os.getcwd(), env.processed_input_path),
                      r"{}/{}".format(os.getcwd(), env.raw_layer_df_path),
                      env.hive_db,
                      env.hive_raw_table)
+    SnowflakeHelper().save_df_to_snowflake(df, env.sf_raw_table)
